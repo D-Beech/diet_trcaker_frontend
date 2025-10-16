@@ -77,7 +77,7 @@ export function ProgressTracker() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Weight Lost</p>
-                  <p className="font-bold">{(stats.startWeight - stats.currentWeight).toFixed(1)} lbs</p>
+                  <p className="font-bold">{(stats.startWeight - stats.currentWeight).toFixed(1)} kg</p>
                 </div>
               </div>
             </CardContent>
@@ -91,7 +91,7 @@ export function ProgressTracker() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">To Goal</p>
-                  <p className="font-bold">{(stats.currentWeight - stats.targetWeight).toFixed(1)} lbs</p>
+                  <p className="font-bold">{(stats.currentWeight - stats.targetWeight).toFixed(1)} kg</p>
                 </div>
               </div>
             </CardContent>

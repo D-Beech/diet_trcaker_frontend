@@ -10,11 +10,11 @@ import { User, Settings, Target, Bell, Moon, Smartphone, LogOut, Edit } from 'lu
 
 export function Profile() {
   const userStats = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    age: 28,
-    height: '5\'10"',
-    currentWeight: 175.8,
+    name: 'Datu',
+    email: 'datu@yoobee.com',
+    age: 27,
+    height: '182cm',
+    currentWeight: 72,
     targetWeight: 170,
     activityLevel: 'Moderately Active',
     joinDate: 'January 2024',
@@ -96,11 +96,11 @@ export function Profile() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Current Weight</Label>
-                <p className="font-medium">{userStats.currentWeight} lbs</p>
+                <p className="font-medium">{userStats.currentWeight} kg</p>
               </div>
               <div>
                 <Label>Target Weight</Label>
-                <p className="font-medium">{userStats.targetWeight} lbs</p>
+                <p className="font-medium">{userStats.targetWeight} kg</p>
               </div>
             </div>
 
