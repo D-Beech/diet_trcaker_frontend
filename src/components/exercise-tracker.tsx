@@ -7,11 +7,13 @@ import { Separator } from './ui/separator';
 import { Plus, Search, Dumbbell, Timer, Flame, Play, Pause, Square } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Progress } from './ui/progress';
+import { NaturalLanguageInput } from './NaturalLanguageInput';
 
 export function ExerciseTracker() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
   const [workoutTime, setWorkoutTime] = useState(0);
+  const [isAddWorkoutOpen, setIsAddWorkoutOpen] = useState(false);
 
   const todayWorkouts = [
     {
@@ -61,6 +63,12 @@ export function ExerciseTracker() {
 
   const totalCaloriesBurned = todayWorkouts.reduce((total, workout) => total + workout.calories, 0);
   const totalWorkoutTime = todayWorkouts.reduce((total, workout) => total + workout.duration, 0);
+
+  const handleWorkoutInput = (input: string) => {
+    console.log('Workout input:', input);
+    // TODO: Process natural language input and add to workouts
+    // This would typically involve parsing the input and extracting exercise details
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -126,49 +134,13 @@ export function ExerciseTracker() {
 
         {/* Quick Actions */}
         <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="flex-1">
-                <Plus className="h-4 w-4 mr-2" />
-                Log Workout
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Exercise</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search exercises..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <div className="max-h-60 overflow-y-auto space-y-2">
-                  {filteredExercises.map((exercise, index) => (
-                    <Card key={index} className="p-3 hover:bg-accent cursor-pointer">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{exercise.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {exercise.category}
-                            {exercise.caloriesPerMin && ` • ${exercise.caloriesPerMin} cal/min`}
-                            {exercise.primaryMuscle && ` • ${exercise.primaryMuscle}`}
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline">
-                          Add
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="flex-1"
+            onClick={() => setIsAddWorkoutOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Log Workout
+          </Button>
 
           <Button 
             variant={isWorkoutActive ? "destructive" : "default"}
@@ -235,6 +207,15 @@ export function ExerciseTracker() {
           )}
         </div>
       </div>
+
+      {/* Natural Language Input Dialog */}
+      <NaturalLanguageInput
+        isOpen={isAddWorkoutOpen}
+        onClose={() => setIsAddWorkoutOpen(false)}
+        onSubmit={handleWorkoutInput}
+        title="Log Workout"
+        placeholder="Describe your workout..."
+      />
     </div>
   );
 }

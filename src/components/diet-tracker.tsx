@@ -6,10 +6,13 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Plus, Search, Coffee, Sun, Sunset, Moon, Mic } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { NaturalLanguageInput } from './NaturalLanguageInput';
 
 export function DietTracker() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+  const [isAddMealOpen, setIsAddMealOpen] = useState(false);
+  const [isManualLogOpen, setIsManualLogOpen] = useState(false);
 
   const todayMeals = {
     breakfast: [
@@ -43,6 +46,17 @@ export function DietTracker() {
 
   const getTotalCalories = (meals: typeof todayMeals[keyof typeof todayMeals]) => {
     return meals.reduce((total, meal) => total + meal.calories, 0);
+  };
+
+  const handleMealInput = (input: string) => {
+    console.log('Meal input:', input);
+    // TODO: Process natural language input and add to meals
+    // This would typically involve parsing the input and extracting food items
+  };
+
+  const handleManualLogInput = (input: string) => {
+    console.log('Manual log input:', input);
+    // TODO: Process natural language input for manual logging
   };
 
   return (
@@ -85,8 +99,11 @@ export function DietTracker() {
         </Button>
 
         {/* Quick Log Meal */}
-        <Button className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button 
+          className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+          onClick={() => setIsManualLogOpen(true)}
+        >
+          <Mic className="h-4 w-4 mr-2" />
           Manual Log Meal
         </Button>
 
@@ -103,46 +120,15 @@ export function DietTracker() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{getTotalCalories(todayMeals[id as keyof typeof todayMeals])} kcal</Badge>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm" onClick={() => setSelectedMeal(id)}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Add to {label}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search foods..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9"
-                          />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto space-y-2">
-                          {filteredFoods.map((food, index) => (
-                            <Card key={index} className="p-3 hover:bg-accent cursor-pointer">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium">{food.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {food.calories} kcal • P: {food.protein}g • C: {food.carbs}g • F: {food.fat}g
-                                  </p>
-                                </div>
-                                <Button size="sm" variant="outline">
-                                  Add
-                                </Button>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedMeal(id);
+                      setIsAddMealOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -170,6 +156,23 @@ export function DietTracker() {
           </Card>
         ))}
       </div>
+
+      {/* Natural Language Input Dialogs */}
+      <NaturalLanguageInput
+        isOpen={isAddMealOpen}
+        onClose={() => setIsAddMealOpen(false)}
+        onSubmit={handleMealInput}
+        title={`Add to ${selectedMeal ? mealTypes.find(m => m.id === selectedMeal)?.label : 'Meal'}`}
+        placeholder="Describe what you ate..."
+      />
+
+      <NaturalLanguageInput
+        isOpen={isManualLogOpen}
+        onClose={() => setIsManualLogOpen(false)}
+        onSubmit={handleManualLogInput}
+        title="Log Meal"
+        placeholder="Describe what you ate..."
+      />
     </div>
   );
 }
