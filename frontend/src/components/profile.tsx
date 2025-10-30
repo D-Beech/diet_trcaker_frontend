@@ -7,11 +7,22 @@ import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { User, Settings, Target, Bell, Moon, Smartphone, LogOut, Edit } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export function Profile() {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    }
+  };
+
   const userStats = {
-    name: 'Datu',
-    email: 'datu@yoobee.com',
+    name: user?.displayName || user?.email?.split('@')[0] || 'User',
+    email: user?.email || 'user@example.com',
     age: 27,
     height: '182cm',
     currentWeight: 72,
@@ -206,8 +217,8 @@ export function Profile() {
             </Button>
             
             <Separator />
-            
-            <Button variant="destructive" className="w-full justify-start">
+
+            <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
