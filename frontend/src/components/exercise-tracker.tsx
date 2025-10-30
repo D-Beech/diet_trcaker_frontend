@@ -66,18 +66,21 @@ export function ExerciseTracker() {
 
   const handleWorkoutInput = async (input: string) => {
     try {
-      await fetch('https://coffeeforbees.free.beeceptor.com', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/log-natlang`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          type: 'exercise',
-          mode: 'log-workout',
-          input,
-          timestamp: new Date().toISOString()
+          user_input: input
         })
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Workout logged:', result);
+        // TODO: Update UI with parsed workout data
+      }
     } catch (err) {
       console.error('Failed to send workout input', err);
     }

@@ -50,19 +50,21 @@ export function DietTracker() {
 
   const handleMealInput = async (input: string) => {
     try {
-      await fetch('https://coffeeforbees.free.beeceptor.com', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/log-natlang`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          type: 'meal',
-          mode: 'add-meal',
-          mealType: selectedMeal,
-          input,
-          timestamp: new Date().toISOString()
+          user_input: input
         })
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Meal logged:', result);
+        // TODO: Update UI with parsed meal data
+      }
     } catch (err) {
       console.error('Failed to send meal input', err);
     }
@@ -70,18 +72,21 @@ export function DietTracker() {
 
   const handleManualLogInput = async (input: string) => {
     try {
-      await fetch('https://coffeeforbees.free.beeceptor.com', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/log-natlang`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          type: 'meal',
-          mode: 'manual-log',
-          input,
-          timestamp: new Date().toISOString()
+          user_input: input
         })
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Meal logged:', result);
+        // TODO: Update UI with parsed meal data
+      }
     } catch (err) {
       console.error('Failed to send manual meal input', err);
     }

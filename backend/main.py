@@ -31,7 +31,7 @@ class WorkoutLogRequest(BaseModel):
     timestamp: Optional[datetime] = None
 
 
-class TestAIRequest(BaseModel):
+class LogNatLangRequest(BaseModel):
     user_input: str = Field(min_length=1)
 
 
@@ -74,7 +74,19 @@ async def summary_today():
     }
 
 
-@app.post("/testai")
-async def test_ai(payload: TestAIRequest):
+@app.post("/log-natlang")
+async def log_natlang(payload: LogNatLangRequest):
+    print("\n" + "="*80)
+    print("📥 INCOMING REQUEST - /log-natlang")
+    print("="*80)
+    print(f"User Input: {payload.user_input}")
+    print("-"*80)
+
     result = parse_log_entry(payload.user_input)
+
+    print("\n📤 OUTGOING RESPONSE - /log-natlang")
+    print("="*80)
+    print(f"Response: {result.model_dump_json(indent=2)}")
+    print("="*80 + "\n")
+
     return result
