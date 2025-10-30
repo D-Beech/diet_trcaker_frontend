@@ -64,10 +64,23 @@ export function ExerciseTracker() {
   const totalCaloriesBurned = todayWorkouts.reduce((total, workout) => total + workout.calories, 0);
   const totalWorkoutTime = todayWorkouts.reduce((total, workout) => total + workout.duration, 0);
 
-  const handleWorkoutInput = (input: string) => {
-    console.log('Workout input:', input);
-    // TODO: Process natural language input and add to workouts
-    // This would typically involve parsing the input and extracting exercise details
+  const handleWorkoutInput = async (input: string) => {
+    try {
+      await fetch('https://coffeeforbees.free.beeceptor.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'exercise',
+          mode: 'log-workout',
+          input,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send workout input', err);
+    }
   };
 
   return (

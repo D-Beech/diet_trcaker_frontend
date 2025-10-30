@@ -48,15 +48,43 @@ export function DietTracker() {
     return meals.reduce((total, meal) => total + meal.calories, 0);
   };
 
-  const handleMealInput = (input: string) => {
-    console.log('Meal input:', input);
-    // TODO: Process natural language input and add to meals
-    // This would typically involve parsing the input and extracting food items
+  const handleMealInput = async (input: string) => {
+    try {
+      await fetch('https://coffeeforbees.free.beeceptor.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'meal',
+          mode: 'add-meal',
+          mealType: selectedMeal,
+          input,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send meal input', err);
+    }
   };
 
-  const handleManualLogInput = (input: string) => {
-    console.log('Manual log input:', input);
-    // TODO: Process natural language input for manual logging
+  const handleManualLogInput = async (input: string) => {
+    try {
+      await fetch('https://coffeeforbees.free.beeceptor.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'meal',
+          mode: 'manual-log',
+          input,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send manual meal input', err);
+    }
   };
 
   return (

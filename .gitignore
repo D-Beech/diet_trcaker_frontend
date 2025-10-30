@@ -21,6 +21,9 @@ build/
 # IDE and editor files
 .vscode/
 .idea/
+.cursor/
+.cursorrules
+CLAUDE.md
 *.swp
 *.swo
 *~
@@ -95,3 +98,16 @@ temp/
 
 # Vite
 .vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
