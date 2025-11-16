@@ -22,7 +22,6 @@ app.add_middleware(
 
 class MealLogRequest(BaseModel):
     input: str = Field(min_length=1)
-    mealType: Optional[Literal["breakfast", "lunch", "dinner", "snacks"]] = None
     timestamp: Optional[datetime] = None
 
 
@@ -43,24 +42,50 @@ async def health():
 @app.post("/api/logs/meal")
 async def log_meal(payload: MealLogRequest):
     # TODO: replace with real parsing
-    parsed_items = [
-        {"name": payload.input, "calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+    items = [
+        {
+            "name": payload.input,
+            "quantity_g": 100,
+            "nutrition": {
+                "calories": 200,
+                "protein": 10,
+                "carbs": 20,
+                "fat": 5
+            }
+        }
     ]
+    total_nutrition = {
+        "calories": sum(i["nutrition"]["calories"] for i in items),
+        "protein": sum(i["nutrition"]["protein"] for i in items),
+        "carbs": sum(i["nutrition"]["carbs"] for i in items),
+        "fat": sum(i["nutrition"]["fat"] for i in items)
+    }
     return {
-        "id": "mock-meal-id",
-        "parsedItems": parsed_items,
-        "totalCalories": sum(i["calories"] for i in parsed_items),
+        "success": True,
+        "timestamp": (payload.timestamp or datetime.now()).isoformat(),
+        "items": items,
+        "totalNutrition": total_nutrition,
+        "rawInput": payload.input
     }
 
 
 @app.post("/api/logs/workout")
 async def log_workout(payload: WorkoutLogRequest):
     # TODO: replace with real parsing
-    activities = [{"name": payload.input, "durationMin": 0, "calories": 0}]
+    exercises = [
+        {
+            "name": payload.input,
+            "duration_min": 30,
+            "calories": 250
+        }
+    ]
     return {
-        "id": "mock-workout-id",
-        "activities": activities,
-        "totalCalories": sum(a["calories"] for a in activities),
+        "success": True,
+        "timestamp": (payload.timestamp or datetime.now()).isoformat(),
+        "exercises": exercises,
+        "totalCaloriesBurned": sum(e["calories"] for e in exercises),
+        "totalDuration": sum(e["duration_min"] for e in exercises),
+        "rawInput": payload.input
     }
 
 
