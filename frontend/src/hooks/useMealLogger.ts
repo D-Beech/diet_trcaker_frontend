@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { MealLog } from '../types/models';
 import { useAuth } from './useAuth';
 import { useOnlineStatus } from './useOnlineStatus';
-import { logMeal, syncPendingItems } from '../services/sync';
+import { logCombinedInput, syncPendingItems } from '../services/sync';
 import { getMealsFromLocalStorage, getTodayData } from '../services/storage';
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -109,16 +109,22 @@ export function useMealLogger() {
       setError(null);
 
       try {
-        const mealLog = await logMeal(user.uid, input, isOnline);
+        const result = await logCombinedInput(user.uid, input, isOnline);
 
-        // Update local state
-        setMeals(prevMeals => [mealLog, ...prevMeals]);
+        // Update local state with all created meals
+        if (result.meals.length > 0) {
+          setMeals(prevMeals => [...result.meals, ...prevMeals]);
+        }
 
-        return mealLog;
+        // Refresh to get updated data including any workouts or bodyweight
+        const { meals: todayMeals } = getTodayData(user.uid);
+        setMeals(todayMeals);
+
+        return result.meals[0] || null;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to log meal';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to log';
         setError(errorMessage);
-        console.error('Error adding meal:', err);
+        console.error('Error adding log:', err);
         return null;
       } finally {
         setLoading(false);

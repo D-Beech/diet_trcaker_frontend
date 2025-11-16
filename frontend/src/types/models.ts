@@ -47,14 +47,21 @@ export interface WorkoutLog {
   parsedByBackend: boolean;      // Parsed by FastAPI
 }
 
+export interface BodyweightLog {
+  id: string;                    // Firestore document ID
+  userId: string;                // Firebase Auth UID
+  timestamp: Date;
+  weight: number;                // kg
+  synced: boolean;               // Synced to Firestore
+}
+
 export interface UserProfile {
   userId: string;                // Firebase Auth UID
   email: string;
   displayName?: string;
   age?: number;
-  height?: string;
-  currentWeight?: number;
-  targetWeight?: number;
+  height?: number;               // cm
+  targetWeight?: number;         // kg
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   goals: {
     calorieGoal: number;
@@ -84,8 +91,8 @@ export interface DailySummary {
 // Helper type for localStorage pending items
 export interface PendingSync {
   id: string;
-  type: 'meal' | 'workout';
-  data: MealLog | WorkoutLog;
+  type: 'meal' | 'workout' | 'bodyweight' | 'profile';
+  data: MealLog | WorkoutLog | BodyweightLog | UserProfile;
   attempts: number;
   lastAttempt?: Date;
 }

@@ -2,16 +2,17 @@
 
 import { collection, doc } from 'firebase/firestore';
 import { db } from '../utils/firebase';
-import { MealLog, WorkoutLog, PendingSync } from '../types/models';
+import { MealLog, WorkoutLog, PendingSync, BodyweightLog } from '../types/models';
 import { MealLogRequest, WorkoutLogRequest, MealLogResponse, WorkoutLogResponse } from '../types/api';
 import {
   saveMealToLocalStorage,
   saveWorkoutToLocalStorage,
+  saveBodyweightToLocalStorage,
   getPendingSync,
   addToPendingSync,
   removeFromPendingSync,
 } from './storage';
-import { saveMealToFirestore, saveWorkoutToFirestore } from './firestore';
+import { saveMealToFirestore, saveWorkoutToFirestore, saveBodyweightToFirestore } from './firestore';
 
 // Generate Firestore document ID
 const generateFirestoreId = (collectionName: string): string => {
@@ -19,6 +20,46 @@ const generateFirestoreId = (collectionName: string): string => {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Combined log response from backend
+interface CombinedLogResponse {
+  success: boolean;
+  timestamp: string;
+  meals: Array<{
+    items: Array<{
+      name: string;
+      quantity_g?: number;
+      quantity_items?: number;
+      nutrition: {
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+      };
+    }>;
+    totalNutrition: {
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+  }>;
+  workouts: Array<{
+    exercises: Array<{
+      name: string;
+      sets?: number;
+      reps?: number;
+      weight_kg?: number;
+      distance_km?: number;
+      duration_min?: number;
+      calories?: number;
+    }>;
+    totalCaloriesBurned: number;
+    totalDuration: number;
+  }>;
+  bodyweight?: number;
+  rawInput: string;
+}
 
 // Parse meal using FastAPI backend
 export const parseMealInput = async (
@@ -221,6 +262,180 @@ export const logWorkout = async (
   });
 
   return workoutLog;
+};
+
+// Combined log - handles meals, workouts, and bodyweight in one input
+export const logCombinedInput = async (
+  userId: string,
+  input: string,
+  isOnline: boolean = navigator.onLine
+): Promise<{ meals: MealLog[]; workouts: WorkoutLog[]; bodyweight?: number }> => {
+  if (!isOnline) {
+    // Offline: save raw input to pending queue
+    const mealLog: MealLog = {
+      id: generateFirestoreId('meals'),
+      userId,
+      timestamp: new Date(),
+      rawInput: input,
+      items: [],
+      totalNutrition: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      synced: false,
+      parsedByBackend: false,
+    };
+    saveMealToLocalStorage(mealLog);
+    addToPendingSync({
+      id: mealLog.id,
+      type: 'meal',
+      data: mealLog,
+      attempts: 0,
+    });
+    return { meals: [mealLog], workouts: [] };
+  }
+
+  try {
+    // Parse with backend
+    const response = await fetch(`${API_BASE_URL}/log-natlang`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user_input: input }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data: CombinedLogResponse = await response.json();
+
+    const createdMeals: MealLog[] = [];
+    const createdWorkouts: WorkoutLog[] = [];
+    let bodyweightValue: number | undefined;
+
+    // Process meals
+    for (const meal of data.meals) {
+      const mealLog: MealLog = {
+        id: generateFirestoreId('meals'),
+        userId,
+        timestamp: new Date(data.timestamp),
+        rawInput: input,
+        items: meal.items,
+        totalNutrition: meal.totalNutrition,
+        synced: false,
+        parsedByBackend: true,
+      };
+
+      saveMealToLocalStorage(mealLog);
+
+      try {
+        await saveMealToFirestore(mealLog);
+        mealLog.synced = true;
+        saveMealToLocalStorage(mealLog);
+      } catch (error) {
+        console.error('Firestore sync failed for meal:', error);
+        addToPendingSync({
+          id: mealLog.id,
+          type: 'meal',
+          data: mealLog,
+          attempts: 0,
+        });
+      }
+
+      createdMeals.push(mealLog);
+    }
+
+    // Process workouts
+    for (const workout of data.workouts) {
+      const workoutLog: WorkoutLog = {
+        id: generateFirestoreId('workouts'),
+        userId,
+        timestamp: new Date(data.timestamp),
+        rawInput: input,
+        exercises: workout.exercises,
+        totalCaloriesBurned: workout.totalCaloriesBurned,
+        totalDuration: workout.totalDuration,
+        synced: false,
+        parsedByBackend: true,
+      };
+
+      saveWorkoutToLocalStorage(workoutLog);
+
+      try {
+        await saveWorkoutToFirestore(workoutLog);
+        workoutLog.synced = true;
+        saveWorkoutToLocalStorage(workoutLog);
+      } catch (error) {
+        console.error('Firestore sync failed for workout:', error);
+        addToPendingSync({
+          id: workoutLog.id,
+          type: 'workout',
+          data: workoutLog,
+          attempts: 0,
+        });
+      }
+
+      createdWorkouts.push(workoutLog);
+    }
+
+    // Process bodyweight
+    if (data.bodyweight) {
+      const bodyweightLog: BodyweightLog = {
+        id: generateFirestoreId('bodyweight'),
+        userId,
+        timestamp: new Date(data.timestamp),
+        weight: data.bodyweight,
+        synced: false,
+      };
+
+      saveBodyweightToLocalStorage(bodyweightLog);
+
+      try {
+        await saveBodyweightToFirestore(bodyweightLog);
+        bodyweightLog.synced = true;
+        saveBodyweightToLocalStorage(bodyweightLog);
+      } catch (error) {
+        console.error('Firestore sync failed for bodyweight:', error);
+        addToPendingSync({
+          id: bodyweightLog.id,
+          type: 'bodyweight',
+          data: bodyweightLog,
+          attempts: 0,
+        });
+      }
+
+      bodyweightValue = data.bodyweight;
+    }
+
+    return {
+      meals: createdMeals,
+      workouts: createdWorkouts,
+      bodyweight: bodyweightValue,
+    };
+  } catch (error) {
+    console.error('Online combined logging failed, falling back to offline mode:', error);
+
+    // Fall back to offline mode
+    const mealLog: MealLog = {
+      id: generateFirestoreId('meals'),
+      userId,
+      timestamp: new Date(),
+      rawInput: input,
+      items: [],
+      totalNutrition: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      synced: false,
+      parsedByBackend: false,
+    };
+
+    saveMealToLocalStorage(mealLog);
+    addToPendingSync({
+      id: mealLog.id,
+      type: 'meal',
+      data: mealLog,
+      attempts: 0,
+    });
+
+    return { meals: [mealLog], workouts: [] };
+  }
 };
 
 // Sync pending items when coming back online

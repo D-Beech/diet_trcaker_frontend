@@ -101,13 +101,13 @@ export function DietTracker() {
           </Card>
         )}
 
-        {/* Log Meal Button */}
+        {/* Quick Log Button */}
         <Button
           className="w-full h-16 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
           onClick={() => setIsLogMealOpen(true)}
         >
           <Plus className="h-5 w-5 mr-2" />
-          Log Meal
+          Quick Log
         </Button>
 
         {/* Today's Meals */}
@@ -163,8 +163,8 @@ export function DietTracker() {
         isOpen={isLogMealOpen}
         onClose={() => setIsLogMealOpen(false)}
         onSubmit={handleMealInput}
-        title="Log Meal"
-        placeholder="Describe what you ate..."
+        title="Quick Log"
+        placeholder="Log meals, workouts, or weight... (e.g., 'I weigh 70kg, ate 300g chicken, did 10 pushups')"
       />
     </div>
   );

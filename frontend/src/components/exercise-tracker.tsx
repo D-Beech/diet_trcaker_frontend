@@ -252,8 +252,8 @@ export function ExerciseTracker() {
         isOpen={isAddWorkoutOpen}
         onClose={() => setIsAddWorkoutOpen(false)}
         onSubmit={handleWorkoutInput}
-        title="Log Workout"
-        placeholder="Describe your workout..."
+        title="Quick Log"
+        placeholder="Log meals, workouts, or weight... (e.g., 'did 10 pushups, ran 5km, ate chicken')"
       />
     </div>
   );

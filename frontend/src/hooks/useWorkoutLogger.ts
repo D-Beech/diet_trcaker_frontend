@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { WorkoutLog } from '../types/models';
 import { useAuth } from './useAuth';
 import { useOnlineStatus } from './useOnlineStatus';
-import { logWorkout, syncPendingItems } from '../services/sync';
+import { logCombinedInput, syncPendingItems } from '../services/sync';
 import { getTodayData } from '../services/storage';
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -26,21 +26,31 @@ export function useWorkoutLogger() {
 
   // Manual sync function
   const manualSync = useCallback(async () => {
-    if (!user || !isOnline) return;
+    if (!user) return;
+    if (!isOnline) {
+      setError('Cannot sync while offline');
+      return;
+    }
 
     setSyncing(true);
+    setError(null);
     try {
-      await syncPendingItems(user.uid);
+      const result = await syncPendingItems(user.uid);
       // Refresh workouts after sync
       const { workouts: todayWorkouts } = getTodayData(user.uid);
       setWorkouts(todayWorkouts);
+
+      // Set error message if there were failures
+      if (result.failed > 0) {
+        setError(`Synced ${result.synced} items, ${result.failed} failed`);
+      }
     } catch (err) {
       console.error('Error syncing pending items:', err);
       setError('Failed to sync pending items');
     } finally {
       setSyncing(false);
     }
-  }, [user, isOnline]);
+  }, [user]);
 
   // Sync on mount (if online and authenticated)
   useEffect(() => {
@@ -99,16 +109,22 @@ export function useWorkoutLogger() {
       setError(null);
 
       try {
-        const workoutLog = await logWorkout(user.uid, input, isOnline);
+        const result = await logCombinedInput(user.uid, input, isOnline);
 
-        // Update local state
-        setWorkouts(prevWorkouts => [workoutLog, ...prevWorkouts]);
+        // Update local state with all created workouts
+        if (result.workouts.length > 0) {
+          setWorkouts(prevWorkouts => [...result.workouts, ...prevWorkouts]);
+        }
 
-        return workoutLog;
+        // Refresh to get updated data including any meals or bodyweight
+        const { workouts: todayWorkouts } = getTodayData(user.uid);
+        setWorkouts(todayWorkouts);
+
+        return result.workouts[0] || null;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to log workout';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to log';
         setError(errorMessage);
-        console.error('Error adding workout:', err);
+        console.error('Error adding log:', err);
         return null;
       } finally {
         setLoading(false);
@@ -124,7 +140,7 @@ export function useWorkoutLogger() {
     }
   }, [user]);
 
-  const getPendingCount = useCallback(() => {
+  const pendingCount = useMemo(() => {
     return workouts.filter(w => !w.synced).length;
   }, [workouts]);
 
@@ -137,6 +153,6 @@ export function useWorkoutLogger() {
     addWorkout,
     refreshWorkouts,
     manualSync,
-    pendingCount: getPendingCount(),
+    pendingCount,
   };
 }

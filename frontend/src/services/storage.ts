@@ -1,9 +1,11 @@
 // LocalStorage service for offline-first data storage
 
-import { MealLog, WorkoutLog, PendingSync } from '../types/models';
+import { MealLog, WorkoutLog, PendingSync, BodyweightLog, UserProfile } from '../types/models';
 
 const MEALS_KEY = 'diet_tracker_meals';
 const WORKOUTS_KEY = 'diet_tracker_workouts';
+const BODYWEIGHT_KEY = 'diet_tracker_bodyweight';
+const PROFILE_KEY = 'diet_tracker_profile';
 const PENDING_SYNC_KEY = 'diet_tracker_pending_sync';
 
 // Helper to prepare log for serialization (converts Dates to ISO strings)
@@ -195,11 +197,90 @@ export const getTodayData = (userId: string) => {
   return { meals, workouts };
 };
 
+// Bodyweight operations
+export const saveBodyweightToLocalStorage = (bodyweight: BodyweightLog): void => {
+  try {
+    const bodyweights = getBodyweightLogsFromLocalStorage();
+    const existingIndex = bodyweights.findIndex(b => b.id === bodyweight.id);
+
+    if (existingIndex >= 0) {
+      bodyweights[existingIndex] = bodyweight;
+    } else {
+      bodyweights.push(bodyweight);
+    }
+
+    const prepared = bodyweights.map(b => ({
+      ...b,
+      timestamp: b.timestamp.toISOString(),
+    }));
+    localStorage.setItem(BODYWEIGHT_KEY, JSON.stringify(prepared));
+  } catch (error) {
+    console.error('Error saving bodyweight to localStorage:', error);
+    throw error;
+  }
+};
+
+export const getBodyweightLogsFromLocalStorage = (userId?: string): BodyweightLog[] => {
+  try {
+    const bodyweightsJson = localStorage.getItem(BODYWEIGHT_KEY);
+    if (!bodyweightsJson) return [];
+
+    const bodyweights: BodyweightLog[] = JSON.parse(bodyweightsJson).map((obj: any) => ({
+      ...obj,
+      timestamp: new Date(obj.timestamp),
+    }));
+
+    return bodyweights.filter(b => !userId || b.userId === userId).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  } catch (error) {
+    console.error('Error reading bodyweight logs from localStorage:', error);
+    return [];
+  }
+};
+
+export const getLatestBodyweightFromLocalStorage = (userId: string): BodyweightLog | null => {
+  const bodyweights = getBodyweightLogsFromLocalStorage(userId);
+  return bodyweights.length > 0 ? bodyweights[0] : null;
+};
+
+// Profile operations
+export const saveProfileToLocalStorage = (profile: UserProfile): void => {
+  try {
+    const prepared = {
+      ...profile,
+      createdAt: profile.createdAt.toISOString(),
+      updatedAt: profile.updatedAt.toISOString(),
+    };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(prepared));
+  } catch (error) {
+    console.error('Error saving profile to localStorage:', error);
+    throw error;
+  }
+};
+
+export const getProfileFromLocalStorage = (): UserProfile | null => {
+  try {
+    const profileJson = localStorage.getItem(PROFILE_KEY);
+    if (!profileJson) return null;
+
+    const obj = JSON.parse(profileJson);
+    return {
+      ...obj,
+      createdAt: new Date(obj.createdAt),
+      updatedAt: new Date(obj.updatedAt),
+    };
+  } catch (error) {
+    console.error('Error reading profile from localStorage:', error);
+    return null;
+  }
+};
+
 // Clear all data (for logout)
 export const clearAllLocalData = (): void => {
   try {
     localStorage.removeItem(MEALS_KEY);
     localStorage.removeItem(WORKOUTS_KEY);
+    localStorage.removeItem(BODYWEIGHT_KEY);
+    localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(PENDING_SYNC_KEY);
   } catch (error) {
     console.error('Error clearing local data:', error);

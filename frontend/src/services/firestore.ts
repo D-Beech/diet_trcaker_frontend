@@ -9,17 +9,19 @@ import {
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
   DocumentData,
   QuerySnapshot,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
-import { MealLog, WorkoutLog, UserProfile } from '../types/models';
+import { MealLog, WorkoutLog, UserProfile, BodyweightLog } from '../types/models';
 
 // Collection names
 const MEALS_COLLECTION = 'meals';
 const WORKOUTS_COLLECTION = 'workouts';
 const USERS_COLLECTION = 'users';
+const BODYWEIGHT_COLLECTION = 'bodyweight';
 
 // Helper to convert Firestore Timestamp to Date
 const timestampToDate = (timestamp: Timestamp | Date): Date => {
@@ -197,6 +199,77 @@ export const getUserProfileFromFirestore = async (userId: string): Promise<UserP
     } as UserProfile;
   } catch (error) {
     console.error('Error getting user profile from Firestore:', error);
+    throw error;
+  }
+};
+
+// Bodyweight operations
+export const saveBodyweightToFirestore = async (bodyweight: BodyweightLog): Promise<void> => {
+  try {
+    const bodyweightDoc = doc(db, BODYWEIGHT_COLLECTION, bodyweight.id);
+    const bodyweightData = {
+      ...bodyweight,
+      timestamp: dateToTimestamp(bodyweight.timestamp),
+    };
+    await setDoc(bodyweightDoc, bodyweightData);
+  } catch (error) {
+    console.error('Error saving bodyweight to Firestore:', error);
+    throw error;
+  }
+};
+
+export const getBodyweightLogsFromFirestore = async (
+  userId: string,
+  startDate?: Date,
+  endDate?: Date
+): Promise<BodyweightLog[]> => {
+  try {
+    const bodyweightRef = collection(db, BODYWEIGHT_COLLECTION);
+    let q = query(bodyweightRef, where('userId', '==', userId), orderBy('timestamp', 'desc'));
+
+    if (startDate) {
+      q = query(q, where('timestamp', '>=', dateToTimestamp(startDate)));
+    }
+    if (endDate) {
+      q = query(q, where('timestamp', '<=', dateToTimestamp(endDate)));
+    }
+
+    const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        timestamp: timestampToDate(data.timestamp),
+      } as BodyweightLog;
+    });
+  } catch (error) {
+    console.error('Error getting bodyweight logs from Firestore:', error);
+    throw error;
+  }
+};
+
+export const getLatestBodyweightFromFirestore = async (userId: string): Promise<BodyweightLog | null> => {
+  try {
+    const bodyweightRef = collection(db, BODYWEIGHT_COLLECTION);
+    const q = query(
+      bodyweightRef,
+      where('userId', '==', userId),
+      orderBy('timestamp', 'desc'),
+      limit(1)
+    );
+
+    const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const data = snapshot.docs[0].data();
+    return {
+      ...data,
+      timestamp: timestampToDate(data.timestamp),
+    } as BodyweightLog;
+  } catch (error) {
+    console.error('Error getting latest bodyweight from Firestore:', error);
     throw error;
   }
 };
