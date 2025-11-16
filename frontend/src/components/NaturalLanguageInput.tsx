@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Mic, MicOff, Send, Loader2 } from 'lucide-react';
+import { Textarea } from './ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Mic, MicOff, Send, Loader2, Keyboard } from 'lucide-react';
 
 interface NaturalLanguageInputProps {
   isOpen: boolean;
@@ -80,7 +80,7 @@ export function NaturalLanguageInput({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -89,57 +89,128 @@ export function NaturalLanguageInput({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
+          <DialogDescription className="text-base">
+            Describe what you ate, your workout, or weight in natural language
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="relative">
-            <Input
+
+        <div className="space-y-6 pt-2">
+          {/* Input Area */}
+          <div className="space-y-3">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder={placeholder}
-              className="pr-20"
+              className="min-h-[120px] resize-none text-base"
               disabled={isLoading}
+              autoFocus
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isLoading}
-                className="h-8 w-8 p-0"
-              >
-                {isRecording ? (
-                  <MicOff className="h-4 w-4 text-red-500" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSubmit}
-                disabled={!input.trim() || isLoading}
-                className="h-8 w-8 p-0"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+
+            {/* Voice input button and hints */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1">
+                <Button
+                  size="sm"
+                  variant={isRecording ? "destructive" : "outline"}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isLoading}
+                  className="h-9 transition-all"
+                  title={isRecording ? "Stop recording" : "Start voice input"}
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="h-4 w-4 animate-pulse mr-2" />
+                      <span className="text-sm">Recording...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline text-sm">Voice Input</span>
+                    </>
+                  )}
+                </Button>
+                <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+                  <Keyboard className="h-3 w-3" />
+                  <span>Press Enter to submit</span>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                <span className={input.length > 500 ? "text-orange-500 font-medium" : ""}>
+                  {input.length}
+                </span>
+                <span className="text-muted-foreground/60"> / 1000</span>
+              </span>
             </div>
           </div>
-          
-          <div className="text-sm text-muted-foreground">
-            <p>💡 Examples:</p>
-            <ul className="mt-1 space-y-1 text-xs">
-              <li>• "I had a chicken breast and rice for lunch"</li>
-              <li>• "Ran for 30 minutes this morning"</li>
-              <li>• "Big Mac and fries"</li>
-            </ul>
+
+          {/* Examples Section */}
+          <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-primary" />
+              <p className="text-sm font-medium">Quick Examples</p>
+            </div>
+            <div className="grid gap-2">
+              <button
+                onClick={() => setInput("I weigh 70kg, ate 300g chicken breast and 200g rice, did 10 pushups")}
+                disabled={isLoading}
+                className="text-left text-sm p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <span className="text-muted-foreground">"</span>
+                <span className="text-foreground">I weigh 70kg, ate 300g chicken breast and 200g rice, did 10 pushups</span>
+                <span className="text-muted-foreground">"</span>
+              </button>
+              <button
+                onClick={() => setInput("Ran 5km in 30 minutes")}
+                disabled={isLoading}
+                className="text-left text-sm p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <span className="text-muted-foreground">"</span>
+                <span className="text-foreground">Ran 5km in 30 minutes</span>
+                <span className="text-muted-foreground">"</span>
+              </button>
+              <button
+                onClick={() => setInput("Breakfast: 2 eggs, whole wheat toast, and coffee")}
+                disabled={isLoading}
+                className="text-left text-sm p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <span className="text-muted-foreground">"</span>
+                <span className="text-foreground">Breakfast: 2 eggs, whole wheat toast, and coffee</span>
+                <span className="text-muted-foreground">"</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!input.trim() || isLoading}
+              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -5,6 +5,7 @@ from typing import Optional, Literal
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+import json
 from ai_services.nlp_processor import parse_log_entry
 
 load_dotenv()
@@ -109,9 +110,74 @@ async def log_natlang(payload: LogNatLangRequest):
 
     result = parse_log_entry(payload.user_input)
 
+    # Transform to frontend format
+    meals = []
+    workouts = []
+
+    # Process food items into meals
+    if result.food:
+        meal_items = []
+        total_nutrition = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+
+        for food in result.food:
+            meal_items.append({
+                "name": food.name,
+                "quantity_g": food.quantity_g,
+                "quantity_items": food.quantity_items,
+                "nutrition": {
+                    "calories": food.nutrition.calories,
+                    "protein": food.nutrition.protein,
+                    "carbs": food.nutrition.carbs,
+                    "fat": food.nutrition.fat
+                }
+            })
+            total_nutrition["calories"] += food.nutrition.calories
+            total_nutrition["protein"] += food.nutrition.protein
+            total_nutrition["carbs"] += food.nutrition.carbs
+            total_nutrition["fat"] += food.nutrition.fat
+
+        meals.append({
+            "items": meal_items,
+            "totalNutrition": total_nutrition
+        })
+
+    # Process exercises into workouts
+    if result.exercise:
+        exercises = []
+        total_calories_burned = 0
+        total_duration = 0
+
+        for exercise in result.exercise:
+            exercises.append({
+                "name": exercise.name,
+                "sets": exercise.sets,
+                "reps": exercise.reps,
+                "weight_kg": exercise.weight_kg,
+                "distance_km": exercise.distance_km,
+                "duration_min": exercise.time_min,
+                "calories": exercise.calories_burned or 0
+            })
+            total_calories_burned += exercise.calories_burned or 0
+            total_duration += exercise.time_min or 0
+
+        workouts.append({
+            "exercises": exercises,
+            "totalCaloriesBurned": total_calories_burned,
+            "totalDuration": total_duration
+        })
+
+    response = {
+        "success": True,
+        "timestamp": result.timestamp.isoformat(),
+        "meals": meals,
+        "workouts": workouts,
+        "bodyweight": result.body_weight_kg,
+        "rawInput": payload.user_input
+    }
+
     print("\n📤 OUTGOING RESPONSE - /log-natlang")
     print("="*80)
-    print(f"Response: {result.model_dump_json(indent=2)}")
+    print(f"Response: {json.dumps(response, indent=2)}")
     print("="*80 + "\n")
 
-    return result
+    return response
