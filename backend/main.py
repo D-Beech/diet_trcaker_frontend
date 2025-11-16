@@ -12,9 +12,12 @@ load_dotenv()
 
 app = FastAPI(title="Diet Backend", version="0.1.0")
 
+# CORS configuration - UPDATE allow_origins for production
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,  # For production, set ALLOWED_ORIGINS env var
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

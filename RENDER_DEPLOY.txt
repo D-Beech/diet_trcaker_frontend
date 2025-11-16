@@ -1,0 +1,41 @@
+RENDER.COM DEPLOYMENT - QUICK GUIDE
+=====================================
+
+Your repo is ready for Render! The render.yaml file tells Render to look in the 'backend' folder.
+
+DEPLOY STEPS:
+-------------
+
+1. Push to GitHub:
+   git add .
+   git commit -m "Deploy to Render"
+   git push
+
+2. Go to https://render.com and sign in with GitHub
+
+3. Click "New +" → "Web Service"
+
+4. Connect your GitHub repo
+
+5. Render will auto-detect render.yaml and use these settings:
+   - Root Directory: backend
+   - Runtime: Python 3.10
+   - Build: pip install -r requirements.txt
+   - Start: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+6. Add Environment Variable in Render Dashboard:
+   OPENAI_API_KEY = your_actual_openai_key_here
+
+7. Click "Create Web Service"
+
+8. Wait 2-3 minutes for deployment
+
+9. You'll get a URL like: https://diet-backend-xxxx.onrender.com
+
+10. Test it:
+    https://diet-backend-xxxx.onrender.com/health
+
+11. Update frontend/.env.production with your backend URL:
+    VITE_API_URL=https://diet-backend-xxxx.onrender.com
+
+DONE! Backend is live on Render.
