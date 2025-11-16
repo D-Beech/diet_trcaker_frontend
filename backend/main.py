@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
@@ -7,10 +7,30 @@ from dotenv import load_dotenv
 import os
 import json
 from ai_services.nlp_processor import parse_log_entry
+from database.db_connection import init_db_pool, close_db_pool
+from auth.firebase_admin import init_firebase
+from middleware.auth_middleware import get_current_user
 
 load_dotenv()
 
 app = FastAPI(title="Diet Backend", version="0.1.0")
+
+# Initialize AWS RDS database connection pool on startup
+@app.on_event("startup")
+async def startup_event():
+    print("="*80)
+    print("Starting Diet Tracker Backend")
+    print("="*80)
+    print("Connecting to AWS RDS nutrition database...")
+    init_db_pool()
+    print("Initializing Firebase Authentication...")
+    init_firebase()
+    print("="*80)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Closing database connections...")
+    close_db_pool()
 
 # CORS configuration - UPDATE allow_origins for production
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -44,7 +64,8 @@ async def health():
 
 
 @app.post("/api/logs/meal")
-async def log_meal(payload: MealLogRequest):
+async def log_meal(payload: MealLogRequest, user: dict = Depends(get_current_user)):
+    # Protected endpoint - requires Firebase authentication
     # TODO: replace with real parsing
     items = [
         {
@@ -74,7 +95,8 @@ async def log_meal(payload: MealLogRequest):
 
 
 @app.post("/api/logs/workout")
-async def log_workout(payload: WorkoutLogRequest):
+async def log_workout(payload: WorkoutLogRequest, user: dict = Depends(get_current_user)):
+    # Protected endpoint - requires Firebase authentication
     # TODO: replace with real parsing
     exercises = [
         {
@@ -94,7 +116,8 @@ async def log_workout(payload: WorkoutLogRequest):
 
 
 @app.get("/api/summary/today")
-async def summary_today():
+async def summary_today(user: dict = Depends(get_current_user)):
+    # Protected endpoint - requires Firebase authentication
     # TODO: replace with DB-backed aggregates
     return {
         "calories": {"consumed": 0, "burned": 0},
@@ -104,10 +127,13 @@ async def summary_today():
 
 
 @app.post("/log-natlang")
-async def log_natlang(payload: LogNatLangRequest):
+async def log_natlang(payload: LogNatLangRequest, user: dict = Depends(get_current_user)):
+    # Protected endpoint - requires Firebase authentication
     print("\n" + "="*80)
-    print("📥 INCOMING REQUEST - /log-natlang")
+    print("INCOMING REQUEST - /log-natlang")
     print("="*80)
+    print(f"User ID: {user['user_id']}")
+    print(f"User Email: {user.get('email', 'N/A')}")
     print(f"User Input: {payload.user_input}")
     print("-"*80)
 
@@ -178,7 +204,7 @@ async def log_natlang(payload: LogNatLangRequest):
         "rawInput": payload.user_input
     }
 
-    print("\n📤 OUTGOING RESPONSE - /log-natlang")
+    print("\nOUTGOING RESPONSE - /log-natlang")
     print("="*80)
     print(f"Response: {json.dumps(response, indent=2)}")
     print("="*80 + "\n")

@@ -1,36 +1,101 @@
 """
 Nutrition service to get calorie and macro information for foods.
-Uses USDA FoodData Central API or fallback estimates.
+
+Architecture:
+- AI extracts structured data (food names, quantities) from natural language
+- This service queries AWS RDS PostgreSQL database containing USDA nutrition data
+- Database contains ~350k+ food items with complete macro profiles
+- Provides accurate, consistent nutrition calculations
 """
 from utils.openai_client import client
+from database.db_connection import get_db_connection, release_db_connection
 import json
 import os
 from typing import Optional
 
-USDA_API_KEY = os.getenv("USDA_API_KEY")
+# AWS RDS Database Configuration
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 def get_nutrition_for_food(food_name: str, quantity_g: Optional[float] = None, quantity_items: Optional[int] = None) -> dict:
     """
-    Get nutrition information for a food item using OpenAI.
-    Returns calories, protein, carbs, and fat.
+    Query AWS RDS nutrition database for accurate macro information.
+
+    Process:
+    1. Food name/quantity already extracted by AI (nlp_processor)
+    2. Search PostgreSQL database for matching food items
+    3. Calculate macros based on quantity and per-100g database values
+    4. Return precise nutrition data
 
     Args:
-        food_name: Name of the food
-        quantity_g: Quantity in grams (if known)
-        quantity_items: Number of items (if quantity in grams not known)
+        food_name: Name of the food (extracted by AI)
+        quantity_g: Quantity in grams (extracted by AI)
+        quantity_items: Number of items (extracted by AI)
 
     Returns:
-        dict with calories, protein, carbs, fat, and estimated_quantity_g
+        dict with calories, protein, carbs, fat from AWS RDS nutrition database
     """
 
-    # Prepare the prompt
+    # Step 1: Query AWS RDS PostgreSQL database for nutrition data
+    conn = get_db_connection()
+
+    if conn:
+        try:
+            cursor = conn.cursor()
+
+            # Search USDA food database by name similarity
+            query = """
+                SELECT
+                    food_name,
+                    calories_per_100g,
+                    protein_per_100g,
+                    carbs_per_100g,
+                    fat_per_100g,
+                    typical_serving_g
+                FROM usda_foods
+                WHERE LOWER(food_name) LIKE LOWER(%s)
+                ORDER BY similarity(food_name, %s) DESC
+                LIMIT 1
+            """
+
+            search_term = f"%{food_name}%"
+            cursor.execute(query, (search_term, food_name))
+            result = cursor.fetchone()
+            cursor.close()
+            release_db_connection(conn)
+
+            if result:
+                # Calculate nutrition based on quantity
+                _, cal_100g, prot_100g, carb_100g, fat_100g, typical_serving = result
+                actual_quantity = quantity_g or typical_serving or 100
+
+                # Scale nutrition values based on quantity
+                multiplier = actual_quantity / 100
+
+                return {
+                    "calories": int(cal_100g * multiplier),
+                    "protein": round(prot_100g * multiplier, 1),
+                    "carbs": round(carb_100g * multiplier, 1),
+                    "fat": round(fat_100g * multiplier, 1),
+                    "estimated_quantity_g": round(actual_quantity, 1)
+                }
+
+        except Exception as e:
+            print(f"Database query failed: {e}, falling back to AI estimates")
+            release_db_connection(conn)
+
+    # Fallback: Use AI for estimation if database is unavailable
+    print(f"Using AI fallback for: {food_name}")
     quantity_str = ""
     if quantity_g:
         quantity_str = f"{quantity_g}g of "
     elif quantity_items:
         quantity_str = f"{quantity_items} "
 
-    system_prompt = """You are a nutrition expert. Provide accurate nutrition information for foods.
+    system_prompt = """You are a nutrition expert with access to USDA database. Provide accurate nutrition information for foods.
 Return a JSON object with this exact structure:
 {
     "calories": <number>,

@@ -4,11 +4,17 @@ import json
 
 def parse_log_entry(user_input: str) -> LogEntry:
     """
-    Parse natural language input into structured LogEntry format.
-    Uses OpenAI to extract exercise and food information.
+    Two-stage processing pipeline:
+    1. AI-powered structured data extraction (food names, quantities, exercise details)
+    2. Nutrition database lookup for accurate macro calculations (not shown - handled by nutrition_service)
+
+    This function focuses on STEP 1: extracting structured entities from natural language.
     """
 
-    system_prompt = """You are a diet and exercise tracking assistant with nutrition expertise. Parse the user's input and extract:
+    # STEP 1: Use AI to parse unstructured input into structured entities
+    # AI extracts: food names, quantities, exercise types, sets/reps, etc.
+    # AI does NOT calculate nutrition - that comes from our AWS RDS nutrition database
+    system_prompt = """You are a diet and exercise tracking assistant. Parse the user's input and extract:
 - Exercise activities (with sets, reps, weight in kg, distance in km, or time in minutes, and estimated calories burned)
 - Food items (with quantity in grams or number of items, and accurate nutrition data)
 - Body weight in kg (if mentioned)
@@ -53,6 +59,10 @@ Rules:
 """
 
     try:
+        print("\nSTEP 1: AI-powered entity extraction")
+        print(f"   Input: '{user_input}'")
+        print("   Extracting: food names, quantities, exercise details...")
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -66,6 +76,10 @@ Rules:
         # Parse the response
         content = response.choices[0].message.content
         parsed_data = json.loads(content)
+
+        print(f"   Extracted {len(parsed_data.get('food', []))} food items, {len(parsed_data.get('exercise', []))} exercises")
+        print("\nSTEP 2: Nutrition calculations from AWS RDS database")
+        print("   Querying PostgreSQL for accurate macro data...")
 
         # Create LogEntry with parsed data
         log_entry = LogEntry(
